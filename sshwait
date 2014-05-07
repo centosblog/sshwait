@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Author: Curtis K - http://www.centosblog.com/
+# Author: Curtis K - http://www.centosblog.com/sshwait-script-waits-ssh-available-connecting/
 # Github: https://www.github.com/centosblog
 # Description: a script that waits for SSH on a remote host to become available before connecting.
 
