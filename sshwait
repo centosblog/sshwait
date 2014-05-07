@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+
+# Author: Curtis K - http://www.centosblog.com/
+# Github: https://www.github.com/centosblog
+# Description: a script that waits for SSH on a remote host to become available before connecting.
+
+# Check if nc is available
+CHECK_NC="$( which nc 2>/dev/null )"
+if [ -n "$CHECK_NC" ]; then
+	NC="nc"
+else
+	echo "Error: netcat or nc not found. Please install this first. Eg:"
+	echo "yum install nc"
+	exit 1
+fi
+
+# Check arguements are present
+if [ -z "$1" ]; then
+        echo
+        echo "Script usage:"
+	echo "sshwait <SSH_OPTIONS> <SSH_USER@SSH_HOST>"
+        exit 1
+fi
+
+# The actual connection string should be the last arguement
+CONN_STRING="$( echo "$@" | awk '{ print $NF }' )"
+
+if [ $# -gt 1 ]; then
+	SSH_OPTS="$( echo "$@" | sed "s/$CONN_STRING//g" )"
+fi
+
+# Determine SSH username
+SSH_USER_CHECK="$( echo "$CONN_STRING" | grep "\@" )"
+
+if [ -n "$SSH_USER_CHECK" ]; then
+	SSH_USER="$( echo "$CONN_STRING" | cut -d"@" -f1 )"
+	SSH_HOST="$( echo "$CONN_STRING" | cut -d"@" -f2 )"
+else
+	SSH_USER="$(whoami)"
+	SSH_HOST="$CONN_STRING"
+fi
+
+# Show parameters
+echo "SSH user: $SSH_USER"
+echo "SSH host: $SSH_HOST"
+[ -n $SSH_OPTS ] && echo "SSH options: $SSH_OPTS"
+
+echo
+
+# Check SSH function
+check_ssh () {
+
+	echo "Waiting for SSH connection"
+	START_WAIT="$( date +%s )"
+	while [ $( $NC -w 5 -z $SSH_HOST 22 > /dev/null ; echo $? ) -ne 0 ]; do
+		echo -ne "$WAITING_DOTS\r"
+		WAITING_DOTS=".${WAITING_DOTS}"
+		sleep 1
+	done
+
+	echo
+	STOP_WAIT="$( date +%s )"
+
+	TOTAL_WAIT="$( echo "scale=2; $STOP_WAIT - $START_WAIT" | bc )"
+
+	tput bel
+	tput bel
+	echo "SSH ready (waited for $TOTAL_WAIT seconds)"
+	echo
+
+	ssh $SSH_OPTS $SSH_USER@$SSH_HOST
+}
+
+check_ssh
